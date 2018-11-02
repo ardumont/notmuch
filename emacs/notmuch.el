@@ -189,6 +189,8 @@ there will be called at other points of notmuch execution."
     (define-key map "+" 'notmuch-search-add-tag)
     (define-key map (kbd "RET") 'notmuch-search-show-thread)
     (define-key map "Z" 'notmuch-tree-from-search-current-query)
+    (define-key map (kbd "M-n") 'notmuch-search-query-result-next)
+    (define-key map (kbd "M-p") 'notmuch-search-query-result-previous)
     map)
   "Keymap for \"notmuch search\" buffers.")
 (fset 'notmuch-search-mode-map notmuch-search-mode-map)
@@ -383,6 +385,8 @@ Complete list of currently available key bindings:
   (make-local-variable 'notmuch-search-oldest-first)
   (make-local-variable 'notmuch-search-target-thread)
   (make-local-variable 'notmuch-search-target-line)
+  (make-local-variable 'notmuch-search-query-limit)
+  (make-local-variable 'notmuch-search-query-offset)
   (setq notmuch-buffer-refresh-function #'notmuch-search-refresh-view)
   (set (make-local-variable 'scroll-preserve-screen-position) t)
   (add-to-invisibility-spec (cons 'ellipsis t))
@@ -959,7 +963,7 @@ PROMPT is the string to prompt with."
 
 (put 'notmuch-search 'notmuch-doc "Search for messages.")
 ;;;###autoload
-(defun notmuch-search (&optional query oldest-first target-thread target-line no-display)
+(defun notmuch-search (&optional query oldest-first target-thread target-line no-display limit offset)
   "Display threads matching QUERY in a notmuch-search buffer.
 
 If QUERY is nil, it is read interactively from the minibuffer.
@@ -973,6 +977,8 @@ Other optional parameters are used as follows:
   NO-DISPLAY: Do not try to foreground the search results buffer. If it is
               already foregrounded i.e. displayed in a window, this has no
               effect, meaning the buffer will remain visible.
+  LIMIT: Try to limit the search to a given size. Defaults to no limit.
+  OFFSET: Start from offset. Defaults to nil
 
 When called interactively, this will prompt for a query and use
 the configured default sort order."
@@ -994,6 +1000,8 @@ the configured default sort order."
     (set 'buffer-undo-list t)
     (set 'notmuch-search-query-string query)
     (set 'notmuch-search-oldest-first oldest-first)
+    (set 'notmuch-search-query-limit limit)
+    (set 'notmuch-search-query-offset (if offset offset 0))
     (set 'notmuch-search-target-thread target-thread)
     (set 'notmuch-search-target-line target-line)
     (notmuch-tag-clear-cache)
@@ -1011,6 +1019,12 @@ the configured default sort order."
 		     (if oldest-first
 			 "--sort=oldest-first"
 		       "--sort=newest-first")
+                     (if limit
+                         (format "--limit=%s" limit)
+                       "")
+                     (if offset
+                         (format "--offset=%s" offset)
+                       "")
 		     query))
 	      ;; Use a scratch buffer to accumulate partial output.
 	      ;; This buffer will be killed by the sentinel, which
@@ -1020,6 +1034,22 @@ the configured default sort order."
 	  (set-process-filter proc 'notmuch-search-process-filter)
 	  (set-process-query-on-exit-flag proc nil))))
     (run-hooks 'notmuch-search-hook)))
+
+(defun notmuch-search-query-result-next ()
+  "Trigger the next results page for the current query."
+  (interactive)
+  (when notmuch-search-query-offset
+    (setq notmuch-search-query-offset
+          (+ notmuch-search-query-offset notmuch-search-query-limit)))
+  (notmuch-search-refresh-view))
+
+(defun notmuch-search-query-result-previous ()
+  "Trigger the previous results page for the current query."
+  (interactive)
+  (when (and notmuch-search-query-offset (> notmuch-search-query-offset 0))
+    (setq notmuch-search-query-offset
+          (max 0 (- notmuch-search-query-offset notmuch-search-query-limit))))
+  (notmuch-search-refresh-view))
 
 (defun notmuch-search-refresh-view ()
   "Refresh the current view.
@@ -1033,9 +1063,11 @@ same relative position within the new buffer."
   (let ((target-line (line-number-at-pos))
 	(oldest-first notmuch-search-oldest-first)
 	(target-thread (notmuch-search-find-thread-id 'bare))
-	(query notmuch-search-query-string))
+	(query notmuch-search-query-string)
+        (limit notmuch-search-query-limit)
+        (offset notmuch-search-query-offset))
     ;; notmuch-search erases the current buffer.
-    (notmuch-search query oldest-first target-thread target-line t)
+    (notmuch-search query oldest-first target-thread target-line t limit offset)
     (goto-char (point-min))))
 
 (defun notmuch-search-toggle-order ()
