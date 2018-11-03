@@ -217,6 +217,10 @@ there will be called at other points of notmuch execution."
 (defvar notmuch-search-query-string)
 (defvar notmuch-search-target-thread)
 (defvar notmuch-search-target-line)
+(defvar notmuch-search-query-limit nil
+  "Optional limit for a user saved-search query.")
+(defvar notmuch-search-query-offset nil
+  "Offset used for a user saved-search query with limit.")
 
 (defvar notmuch-search-disjunctive-regexp      "\\<[oO][rR]\\>")
 
