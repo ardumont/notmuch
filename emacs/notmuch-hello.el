@@ -106,7 +106,8 @@ searches so they still work in customize."
 			    (choice :tag " Search Type"
 				    (const :tag "Search mode" nil)
 				    (const :tag "Tree mode" tree)
-				    (const :tag "Unthreaded mode" unthreaded))))))
+				    (const :tag "Unthreaded mode" unthreaded)
+				    (const :tag "Paginated mode" paginated))))))
 
 (defcustom notmuch-saved-searches
   `((:name "inbox" :query "tag:inbox" :key ,(kbd "i"))

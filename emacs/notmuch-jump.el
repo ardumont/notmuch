@@ -64,8 +64,10 @@ fast way to jump to a saved search from anywhere in Notmuch."
 			  `(lambda () (notmuch-tree ',query)))
 			 ((eq (plist-get saved-search :search-type) 'unthreaded)
 			  `(lambda () (notmuch-unthreaded ',query)))
+             ((eq (plist-get saved-search :search-type) 'paginated)
+              `(lambda () (notmuch-search ',query ',oldest-first nil nil nil ',limit)))
 			 (t
-			  `(lambda () (notmuch-search ',query ',oldest-first nil nil nil ',limit)))))
+			  `(lambda () (notmuch-search ',query ',oldest-first)))))
 		  action-map)))))
     (setq action-map (nreverse action-map))
 
